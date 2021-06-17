@@ -17,11 +17,21 @@ impl Config {
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    let filtered: Vec<&str> = contents
+    contents
         .lines()
-        .filter(|line| line.contains(query))
-        .collect();
-    filtered
+        .filter(|line: &&str| line.contains(query))
+        .collect()
+}
+
+pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+    let normalized_query = query.to_lowercase();
+    contents
+        .lines()
+        .filter(|line| {
+            let normalized_line = line.to_lowercase();
+            normalized_line.contains(&normalized_query)
+        })
+        .collect()
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
@@ -40,13 +50,22 @@ mod tests {
     const CONTENTS: &str = "\
     Rust:\n\
     safe, fast, productive.\n\
-    Pick three.";
+    Pick three.\n\
+    Trust me.";
 
     #[test]
-    fn one_result() {
+    fn case_sensitive() {
         let query = "duct";
         let expected = vec!["safe, fast, productive."];
 
         assert_eq!(expected, search(query, CONTENTS));
+    }
+
+    #[test]
+    fn case_insensitive() {
+        let query = "ruST";
+        let expected = vec!["Rust:", "Trust me."];
+
+        assert_eq!(expected, search_case_insensitive(query, CONTENTS));
     }
 }
