@@ -1,8 +1,9 @@
-use std::{error::Error, fs};
+use std::{error::Error, fs, env};
 
 pub struct Config {
     pub query: String,
     pub filename: String,
+    pub case_sensitive: bool,
 }
 
 impl Config {
@@ -12,11 +13,12 @@ impl Config {
         };
         let query = args[1].clone();
         let filename = args[2].clone();
-        return Ok(Config { query, filename });
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+        return Ok(Config { query, filename, case_sensitive });
     }
 }
 
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
     contents
         .lines()
         .filter(|line: &&str| line.contains(query))
@@ -36,7 +38,12 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.filename)?;
-    for line in search(&config.query, &contents) {
+    let results = if config.case_sensitive {
+        search_case_sensitive(&config.query, &contents)
+    } else {
+        search_case_insensitive(&config.query, &contents)
+    };
+    for line in results {
         println!("{}", line);
     }
 
@@ -58,7 +65,7 @@ mod tests {
         let query = "duct";
         let expected = vec!["safe, fast, productive."];
 
-        assert_eq!(expected, search(query, CONTENTS));
+        assert_eq!(expected, search_case_sensitive(query, CONTENTS));
     }
 
     #[test]
